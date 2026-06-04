@@ -35,4 +35,4 @@ fields:
     type: string
     label: Author handle
     required: true
-    default: "$_username"
+    default: "@$_username"
