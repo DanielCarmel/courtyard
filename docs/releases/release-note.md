@@ -1,4 +1,4 @@
-# v0.1.0 — this is a test
+# v0.1.0 — xfvc
 
 **Type:** minor · ⚠️ breaking change
 **Author:** @you
@@ -6,7 +6,7 @@
 
 ## Summary
 
-this is a test
+xfvc
 
 ## Breaking Changes
 
