@@ -1,0 +1,22 @@
+services:
+  courtyard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: courtyard:local
+    ports:
+      - "8080:8080"
+    environment:
+      COURTYARD_ADDR: ":8080"
+      COURTYARD_BASE_URL: "${COURTYARD_BASE_URL:-http://localhost:8080}"
+      GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
+      GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
+      BITBUCKET_CLIENT_ID: "${BITBUCKET_CLIENT_ID:-}"
+      BITBUCKET_CLIENT_SECRET: "${BITBUCKET_CLIENT_SECRET:-}"
+    restart: unless-stopped
+    # distroless has no shell/curl — use a TCP-level liveness check instead.
+    # For richer health checks, put Courtyard behind a proxy (nginx/Caddy) and
+    # check GET /healthz from there.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true

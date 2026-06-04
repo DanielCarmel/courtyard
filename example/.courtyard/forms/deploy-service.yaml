@@ -1,0 +1,62 @@
+name: deploy-service
+description: Deploy a new service to a Kubernetes cluster
+targetBranch: main
+branchName: "courtyard/{{ .team }}/{{ .appName }}/{{ .environment }}"
+branchMode: reuse
+commitMessage: "feat({{ .team }}): deploy {{ .appName }} to {{ .environment }}"
+outputPath: "clusters/{{ .environment }}/{{ .namespace }}"
+
+fields:
+  - name: team
+    type: enum
+    label: Team
+    options: [platform, payments, devops, data]
+    required: true
+
+  - name: appName
+    type: string
+    label: Application Name
+    required: true
+    validation: "^[a-z][a-z0-9-]{1,39}$"
+
+  - name: environment
+    type: enum
+    label: Environment
+    options: [dev, staging, prod]
+    required: true
+
+  - name: namespace
+    type: string
+    label: Kubernetes Namespace
+    required: true
+    validation: "^[a-z][a-z0-9-]{1,62}$"
+
+  - name: image
+    type: string
+    label: Container Image
+    required: true
+
+  - name: imageTag
+    type: string
+    label: Image Tag
+    required: true
+    default: latest
+
+  - name: replicas
+    type: number
+    label: Replica Count
+    default: 2
+
+  - name: enableIngress
+    type: boolean
+    label: Enable Ingress
+    default: false
+
+  - name: ingressHost
+    type: string
+    label: Ingress Hostname
+
+templates:
+  deployment.yaml.tmpl: {}
+  service.yaml.tmpl: {}
+  kustomization.yaml.tmpl: {}

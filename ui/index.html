@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Courtyard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+  <div id="app" x-data="app()" x-init="init()">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <h1 class="logo">Courtyard</h1>
+        <div class="header-right">
+          <span x-show="user" x-text="user && user.provider ? 'Signed in via ' + user.provider : ''" class="user-info"></span>
+          <a x-show="user" href="/auth/logout" class="btn btn-sm">Sign out</a>
+          <div x-show="!user" class="login-options">
+            <a href="/auth/github/login" class="btn">Sign in with GitHub</a>
+            <a href="/auth/bitbucket/login" class="btn btn-secondary">Sign in with Bitbucket</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content (authenticated) -->
+    <main x-show="user" class="main">
+      <!-- Selectors row -->
+      <div class="selectors">
+        <div class="selector-group">
+          <label for="repo-select">Repository</label>
+          <select id="repo-select" x-model="selectedRepo" @change="onRepoChange()" :disabled="repos.length === 0">
+            <option value="">— select repo —</option>
+            <template x-for="r in repos" :key="r.Owner + '/' + r.Name">
+              <option :value="r.Owner + '/' + r.Name" x-text="r.Owner + '/' + r.Name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="selector-group" x-show="forms.length > 0">
+          <label for="form-select">Form</label>
+          <select id="form-select" x-model="selectedForm" @change="onFormChange()">
+            <option value="">— select form —</option>
+            <template x-for="f in forms" :key="f">
+              <option :value="f" x-text="f"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+
+      <!-- Error banner -->
+      <div x-show="errorMsg" class="error-banner" x-text="errorMsg"></div>
+
+      <!-- PR success banner -->
+      <div x-show="prURL" class="success-banner">
+        Pull request created: <a :href="prURL" target="_blank" rel="noopener" x-text="prURL"></a>
+      </div>
+
+      <!-- Two-panel layout -->
+      <div class="panels" x-show="formSpec">
+        <!-- Left: Form panel -->
+        <section class="panel panel-form">
+          <h2 x-text="formSpec && formSpec.name"></h2>
+          <p x-show="formSpec && formSpec.description" x-text="formSpec && formSpec.description" class="description"></p>
+
+          <form @submit.prevent="submitForm()" autocomplete="off">
+            <template x-for="field in (formSpec ? formSpec.fields : [])" :key="field.name">
+              <div class="field-group">
+                <label :for="'f-' + field.name">
+                  <span x-text="field.label || field.name"></span>
+                  <span x-show="field.required" class="required-mark">*</span>
+                </label>
+
+                <!-- string -->
+                <input
+                  x-show="field.type === 'string'"
+                  :id="'f-' + field.name"
+                  type="text"
+                  :required="field.required"
+                  :pattern="field.validation || null"
+                  x-model="values[field.name]"
+                  @input="schedulePreview()"
+                />
+
+                <!-- number -->
+                <input
+                  x-show="field.type === 'number'"
+                  :id="'f-' + field.name"
+                  type="number"
+                  :required="field.required"
+                  x-model.number="values[field.name]"
+                  @input="schedulePreview()"
+                />
+
+                <!-- boolean -->
+                <label x-show="field.type === 'boolean'" class="checkbox-label">
+                  <input
+                    :id="'f-' + field.name"
+                    type="checkbox"
+                    x-model="values[field.name]"
+                    @change="schedulePreview()"
+                  />
+                  <span x-text="field.label || field.name"></span>
+                </label>
+
+                <!-- enum -->
+                <select
+                  x-show="field.type === 'enum'"
+                  :id="'f-' + field.name"
+                  :required="field.required"
+                  x-model="values[field.name]"
+                  @change="schedulePreview()"
+                >
+                  <option value="">— select —</option>
+                  <template x-for="opt in (field.options || [])" :key="opt">
+                    <option :value="opt" x-text="opt"></option>
+                  </template>
+                </select>
+
+                <!-- field-level validation error -->
+                <span x-show="fieldErrors[field.name]" class="field-error" x-text="fieldErrors[field.name]"></span>
+              </div>
+            </template>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" :disabled="submitting">
+                <span x-show="!submitting">Submit</span>
+                <span x-show="submitting">Submitting…</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Right: Preview panel -->
+        <section class="panel panel-preview">
+          <div class="preview-header">
+            <h2>Preview</h2>
+            <span x-show="previewLoading" class="loading-indicator">Loading…</span>
+          </div>
+
+          <div x-show="previewFiles.length === 0 && !previewLoading" class="preview-empty">
+            Fill in the form to see a preview.
+          </div>
+
+          <template x-for="file in previewFiles" :key="file.path">
+            <div class="preview-file">
+              <div class="preview-file-path" x-text="file.path"></div>
+              <pre class="preview-file-content" x-text="file.content"></pre>
+            </div>
+          </template>
+        </section>
+      </div>
+    </main>
+
+    <!-- Loading state -->
+    <div x-show="loading && !user" class="center-msg">Loading…</div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
