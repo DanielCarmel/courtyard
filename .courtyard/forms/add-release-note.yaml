@@ -1,0 +1,38 @@
+name: add-release-note
+description: Add a changelog entry for an upcoming Courtyard release
+targetBranch: main
+branchName: "courtyard/release-note/{{ .version | replace \".\" \"-\" }}"
+branchMode: reuse
+commitMessage: "docs: add release note for v{{ .version }}"
+outputPath: "docs/releases"
+
+fields:
+  - name: version
+    type: string
+    label: Version
+    required: true
+    default: "0.1.0"
+    validation: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+  - name: releaseType
+    type: enum
+    label: Release Type
+    options: [patch, minor, major]
+    required: true
+    default: patch
+
+  - name: summary
+    type: string
+    label: One-line summary
+    required: true
+
+  - name: breaking
+    type: boolean
+    label: Contains breaking changes?
+    default: false
+
+  - name: author
+    type: string
+    label: Author handle
+    required: true
+    default: "@you"
