@@ -36,8 +36,14 @@ func NewRouter(handlers *Handlers, oauth *OAuthConfig, sessions *SessionStore, u
 	mux.Handle("GET /api/repos", api(handlers.HandleListRepos))
 	mux.Handle("GET /api/repos/{owner}/{repo}/forms", api(handlers.HandleListForms))
 	mux.Handle("GET /api/repos/{owner}/{repo}/forms/{form}", api(handlers.HandleGetForm))
+	mux.Handle("GET /api/repos/{owner}/{repo}/tree", api(handlers.HandleListTree))
 	mux.Handle("POST /api/repos/{owner}/{repo}/forms/{form}/preview", api(handlers.HandlePreview))
 	mux.Handle("POST /api/repos/{owner}/{repo}/forms/{form}/submit", api(handlers.HandleSubmit))
+
+	// Studio: inline form builder (no .courtyard/ config in repo required).
+	mux.Handle("POST /api/studio/preview", api(handlers.HandleStudioPreview))
+	mux.Handle("POST /api/studio/commit", api(handlers.HandleStudioCommit))
+	mux.Handle("POST /api/studio/download", api(handlers.HandleStudioDownload))
 
 	// Serve embedded UI for all other paths.
 	if uiFS != nil {

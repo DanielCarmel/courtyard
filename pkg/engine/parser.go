@@ -8,31 +8,31 @@ import (
 
 // FormSpec is the parsed representation of a .courtyard/forms/*.yaml file.
 type FormSpec struct {
-	Name          string                      `yaml:"name"`
-	Description   string                      `yaml:"description"`
-	TargetBranch  string                      `yaml:"targetBranch"`
-	BranchName    string                      `yaml:"branchName"`
-	BranchMode    string                      `yaml:"branchMode"`    // "reuse" (default) or "fresh"
-	CommitMessage string                      `yaml:"commitMessage"`
-	OutputPath    string                      `yaml:"outputPath"`
-	Fields        []FieldSpec                 `yaml:"fields"`
-	Templates     map[string]TemplateOverride `yaml:"templates"`
+	Name          string                      `yaml:"name"          json:"name"`
+	Description   string                      `yaml:"description"   json:"description"`
+	TargetBranch  string                      `yaml:"targetBranch"  json:"targetBranch"`
+	BranchName    string                      `yaml:"branchName"    json:"branchName"`
+	BranchMode    string                      `yaml:"branchMode"    json:"branchMode"`    // "reuse" (default) or "fresh"
+	CommitMessage string                      `yaml:"commitMessage" json:"commitMessage"`
+	OutputPath    string                      `yaml:"outputPath"    json:"outputPath"`
+	Fields        []FieldSpec                 `yaml:"fields"        json:"fields"`
+	Templates     map[string]TemplateOverride `yaml:"templates"     json:"templates"`
 }
 
 // FieldSpec defines a single form field.
 type FieldSpec struct {
-	Name       string   `yaml:"name"`
-	Type       string   `yaml:"type"`       // string | number | boolean | enum
-	Label      string   `yaml:"label"`
-	Required   bool     `yaml:"required"`
-	Default    interface{} `yaml:"default"`
-	Options    []string `yaml:"options"`    // for enum type
-	Validation string   `yaml:"validation"` // regex
+	Name       string      `yaml:"name"       json:"name"`
+	Type       string      `yaml:"type"       json:"type"`       // string | number | boolean | enum
+	Label      string      `yaml:"label"      json:"label"`
+	Required   bool        `yaml:"required"   json:"required"`
+	Default    interface{} `yaml:"default"    json:"default"`
+	Options    []string    `yaml:"options"    json:"options"`    // for enum type
+	Validation string      `yaml:"validation" json:"validation"` // regex
 }
 
 // TemplateOverride allows a per-file output path override.
 type TemplateOverride struct {
-	OutputPath string `yaml:"outputPath"`
+	OutputPath string `yaml:"outputPath" json:"outputPath"`
 }
 
 // ParseFormSpec parses raw YAML bytes into a FormSpec.

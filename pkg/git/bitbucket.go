@@ -50,6 +50,38 @@ func (b *BitbucketProvider) doJSON(ctx context.Context, token, method, url strin
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
+// GetCurrentUser returns the authenticated user's Bitbucket profile.
+func (b *BitbucketProvider) GetCurrentUser(ctx context.Context, token string) (*UserInfo, error) {
+	type avatarLink struct {
+		Href string `json:"href"`
+	}
+	type userLinks struct {
+		Avatar avatarLink `json:"avatar"`
+	}
+	type bbUser struct {
+		Username    string    `json:"username"`
+		Nickname    string    `json:"nickname"`
+		DisplayName string    `json:"display_name"`
+		Links       userLinks `json:"links"`
+	}
+	var u bbUser
+	if err := b.doJSON(ctx, token, "GET", b.apiBase+"/user", &u); err != nil {
+		return nil, fmt.Errorf("bitbucket.GetCurrentUser: %w", err)
+	}
+	username := u.Username
+	if username == "" {
+		username = u.Nickname
+	}
+	if username == "" {
+		username = u.DisplayName
+	}
+	return &UserInfo{
+		Username:  username,
+		AvatarURL: u.Links.Avatar.Href,
+		Provider:  "bitbucket",
+	}, nil
+}
+
 // GetRepositories aggregates repos across all workspaces the user belongs to.
 func (b *BitbucketProvider) GetRepositories(ctx context.Context, token string) ([]Repository, error) {
 	// List all workspaces.
@@ -138,8 +170,20 @@ func (b *BitbucketProvider) ListForms(ctx context.Context, token, owner, repo st
 	type page struct {
 		Values []entry `json:"values"`
 	}
+	resp, err := b.do(ctx, token, "GET", url, nil, "")
+	if err != nil {
+		return nil, fmt.Errorf("ListForms: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return []string{}, nil
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ListForms: HTTP %d: %s", resp.StatusCode, string(bodyBytes))
+	}
 	var p page
-	if err := b.doJSON(ctx, token, "GET", url, &p); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
 		return nil, fmt.Errorf("ListForms: %w", err)
 	}
 	var forms []string
@@ -221,6 +265,56 @@ func (b *BitbucketProvider) GetTemplateFiles(ctx context.Context, token, owner, 
 		return nil, fmt.Errorf("GetTemplateFiles: no templates found at %q", prefix)
 	}
 	return files, nil
+}
+
+// ListTree returns paths of files under dirPath (relative to repo root) up to max entries.
+// .courtyard/ entries are excluded. truncated is true when the cap was hit.
+// Directories are traversed breadth-first.
+func (b *BitbucketProvider) ListTree(ctx context.Context, token, owner, repo, dirPath string, max int) ([]string, bool, error) {
+	type entry struct {
+		Path string `json:"path"`
+		Type string `json:"type"`
+	}
+	type page struct {
+		Values []entry `json:"values"`
+		Next   string  `json:"next"`
+	}
+
+	srcPath := dirPath
+	if srcPath != "" && !strings.HasSuffix(srcPath, "/") {
+		srcPath += "/"
+	}
+	startURL := fmt.Sprintf("%s/repositories/%s/%s/src/HEAD/%s?pagelen=100", b.apiBase, owner, repo, srcPath)
+
+	queue := []string{startURL}
+	var paths []string
+
+	for len(queue) > 0 {
+		url := queue[0]
+		queue = queue[1:]
+		for url != "" {
+			var p page
+			if err := b.doJSON(ctx, token, "GET", url, &p); err != nil {
+				return nil, false, fmt.Errorf("bitbucket.ListTree: %w", err)
+			}
+			for _, e := range p.Values {
+				if strings.HasPrefix(e.Path, ".courtyard/") {
+					continue
+				}
+				if e.Type == "commit_directory" {
+					dirURL := fmt.Sprintf("%s/repositories/%s/%s/src/HEAD/%s/?pagelen=100", b.apiBase, owner, repo, e.Path)
+					queue = append(queue, dirURL)
+				} else if e.Type == "commit_file" {
+					paths = append(paths, e.Path)
+					if len(paths) >= max {
+						return paths, true, nil
+					}
+				}
+			}
+			url = p.Next
+		}
+	}
+	return paths, false, nil
 }
 
 // CreateBranchAndPullRequest creates a branch, commits all files, and opens a PR.

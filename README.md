@@ -112,6 +112,42 @@ templates:
     outputPath: "terraform/{{ .environment }}.tf"   # custom path
 ```
 
+### Built-in context variables
+
+In addition to the form fields, Courtyard injects the following variables into every template evaluation, `branchName`, and `commitMessage`:
+
+| Variable | Value |
+|---|---|
+| `._username` | The logged-in user's Git username (e.g. `DanielCarmel`) |
+| `._provider` | The OAuth provider (`github` or `bitbucket`) |
+
+These work everywhere Go template expressions are evaluated:
+
+```yaml
+# In branchName / commitMessage
+branchName:    "courtyard/{{ ._username }}/{{ .appName }}"
+commitMessage: "feat: deploy {{ .appName }} by {{ ._username }}"
+```
+
+```yaml
+# In template files (.tmpl)
+author: {{ ._username }}
+submitted_via: {{ ._provider }}
+```
+
+You can also use `$_username` (or `$_provider`) as the `default` value for any field — Courtyard will pre-fill the field with the real username when the form loads, and the user can still edit it before submitting:
+
+```yaml
+fields:
+  - name: author
+    type: string
+    label: Author handle
+    required: true
+    default: "@$_username"   # auto-filled with logged-in username
+```
+
+---
+
 ### Template files (`templates/my-form/*.tmpl`)
 
 Standard Go `text/template` syntax with all [Sprig functions](https://masterminds.github.io/sprig/) available:
@@ -162,7 +198,7 @@ POST routes also require the `X-Requested-With: XMLHttpRequest` header (CSRF pro
 | `GET` | `/auth/bitbucket/login` | Start Bitbucket OAuth flow |
 | `GET` | `/auth/bitbucket/callback` | Bitbucket OAuth callback |
 | `GET` | `/auth/logout` | Clear session |
-| `GET` | `/api/me` | Current user's provider name |
+| `GET` | `/api/me` | Current user info — `{username, avatar_url, provider}` |
 | `GET` | `/api/repos` | List accessible repositories |
 | `GET` | `/api/repos/{owner}/{repo}/forms` | List available forms in a repo |
 | `GET` | `/api/repos/{owner}/{repo}/forms/{form}` | Get parsed form schema |
