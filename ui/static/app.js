@@ -25,6 +25,7 @@ function app() {
 
     // ── Preview / submit ──
     previewFiles: [],
+    openPreviewFiles: {},  // {path: bool} — tracks which preview files are expanded
     previewLoading: false,
     submitting: false,
     prURL: '',
@@ -40,6 +41,12 @@ function app() {
     _previewTimer: null,
 
     // ── Computed ──
+    get previewContentMap() {
+      const m = {};
+      for (const f of this.previewFiles) m[f.path] = f.content;
+      return m;
+    },
+
     get filteredRepos() {
       if (!this.projectsSearch.trim()) return this.allRepos;
       const q = this.projectsSearch.toLowerCase();
@@ -314,12 +321,21 @@ function app() {
         }
         this.fieldErrors = {};
         this.previewFiles = data.files || [];
+        this.openPreviewFiles = {};
         if (this.previewFiles.length > 0) this.loadScopedTree();
       } catch (e) {
         this.errorMsg = 'Preview failed.';
       } finally {
         this.previewLoading = false;
       }
+    },
+
+    // ── Preview file collapse ──
+    togglePreviewFile(path) {
+      this.openPreviewFiles = {
+        ...this.openPreviewFiles,
+        [path]: !this.openPreviewFiles[path],
+      };
     },
 
     // Fetch the repo subtree scoped to the common ancestor of generated output paths.
@@ -407,6 +423,37 @@ function app() {
         _username: this.user?.username || '',
         _provider: this.user?.provider || '',
       };
+    },
+
+    // Simple client-side Go template interpolation: replaces {{ .field }} with current values.
+    renderGoTemplate(tmpl) {
+      if (!tmpl) return '';
+      // Matches {{ .field }} and {{ .field | pipe1 arg | pipe2 arg ... }}
+      return tmpl.replace(/\{\{\s*\.(\w+)((?:\s*\|[^}]*)?)\s*\}\}/g, (_, key, pipeStr) => {
+        const v = this.values[key];
+        let val = (v !== undefined && v !== null && v !== '') ? String(v) : '';
+
+        if (pipeStr) {
+          const pipes = pipeStr.split('|').map(p => p.trim()).filter(Boolean);
+          for (const pipe of pipes) {
+            const fn = pipe.match(/^(\w+)/)?.[1];
+            const strArgs = [...pipe.matchAll(/"([^"]*)"/g)].map(m => m[1]);
+            const numArg  = pipe.match(/\s+(\d+)\s*$/)?.[1];
+            switch (fn) {
+              case 'lower':     val = val.toLowerCase(); break;
+              case 'upper':     val = val.toUpperCase(); break;
+              case 'replace':   if (strArgs.length >= 2) val = val.split(strArgs[0]).join(strArgs[1]); break;
+              case 'trunc':     if (numArg) val = val.slice(0, parseInt(numArg)); break;
+              case 'default':   if (!val && strArgs.length) val = strArgs[0]; break;
+              case 'kebabcase': val = val.toLowerCase().replace(/[\s_]+/g, '-'); break;
+              case 'camelcase': val = val.replace(/[-_\s]+(.)/g, (_, c) => c.toUpperCase()); break;
+              case 'title':     val = val.replace(/\b\w/g, c => c.toUpperCase()); break;
+            }
+          }
+        }
+
+        return val || `{${key}}`;
+      });
     },
 
     // ── Theme ──
