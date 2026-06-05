@@ -338,6 +338,20 @@ function app() {
       };
     },
 
+    toggleStudioFile(path) {
+      this.studioOpenFiles = {
+        ...this.studioOpenFiles,
+        [path]: !this.studioOpenFiles[path],
+      };
+    },
+
+    toggleStudioCommitFile(path) {
+      this.studioOpenCommitFiles = {
+        ...this.studioOpenCommitFiles,
+        [path]: !this.studioOpenCommitFiles[path],
+      };
+    },
+
     // Fetch the repo subtree scoped to the common ancestor of generated output paths.
     async loadScopedTree() {
       if (!this.previewFiles.length || !this.selectedRepo) return;
@@ -475,6 +489,8 @@ function app() {
     studioValues: {},            // filled by the preview form
     studioSpecFields: [],        // FieldSpec[] parsed from a successful spec parse
     studioPreviewFiles: [],      // [{path, content}] from last preview
+    studioOpenFiles: {},          // {path: bool} — tracks expanded studio preview files
+    studioOpenCommitFiles: {},    // {path: bool} — tracks expanded .courtyard/ commit files
     studioPreviewLoading: false,
     studioSubmitting: false,
     studioDownloading: false,
@@ -494,6 +510,24 @@ function app() {
     // CodeMirror instances (not reactive — managed imperatively)
     _studioSpecCM: null,
     _studioTemplateCMs: {},      // {id: CodeMirrorInstance}
+
+    get studioPreviewContentMap() {
+      const m = {};
+      for (const f of this.studioPreviewFiles) m[f.path] = f.content;
+      return m;
+    },
+
+    // Builds [{path, content}] for the .courtyard/ config files about to be committed.
+    // path[0] = form spec YAML, path[1..] = template files.
+    get studioCommitFiles() {
+      const paths = this.studioCommitTree;
+      if (!paths.length) return [];
+      const files = [{ path: paths[0], content: this.studioSpec }];
+      for (let i = 0; i < this.studioTemplates.length; i++) {
+        if (paths[i + 1]) files.push({ path: paths[i + 1], content: this.studioTemplates[i].content || '' });
+      }
+      return files;
+    },
 
     // Derived: repos filtered by studioRepoSearch
     get studioFilteredRepos() {
@@ -830,6 +864,8 @@ function app() {
         this.studioFieldErrors = {};
         this.studioSpecError = '';
         this.studioPreviewFiles = data.files || [];
+        this.studioOpenFiles = {};
+        this.studioOpenCommitFiles = {};
         this._parseStudioFieldsClientSide();
         this.studioTreeFiles = [];
         this.studioTreeTruncated = false;

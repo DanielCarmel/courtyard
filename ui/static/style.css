@@ -507,7 +507,7 @@ body {
 /* ── Form + preview grid ── */
 .form-preview-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -792,7 +792,7 @@ body {
 }
 
 /* ── PR Preview card ── */
-.pr-preview-body { padding: 14px 18px 18px; }
+.pr-preview-body { padding: 12px 16px 16px; }
 .pr-preview-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .pr-preview-row  { display: flex; align-items: baseline; gap: 10px; font-size: .85rem; }
 .pr-preview-label {
@@ -807,6 +807,67 @@ body {
 .pr-preview-value { color: var(--text); min-width: 0; word-break: break-all; }
 .pr-preview-mono  { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .82rem; }
 .pr-submit-btn { width: 100%; justify-content: center; padding: 10px; font-size: .9rem; }
+
+/* ── Panel section tags (small pills in panel headers) ── */
+.panel-section-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: .67rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  line-height: 1.5;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+.panel-section-tag-preview {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.panel-section-tag-commit {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+/* ── Commit file list (inside commit card) ── */
+.commit-files-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.commit-file-entry + .commit-file-entry { border-top: 1px solid var(--border); }
+.commit-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: background .12s;
+  min-width: 0;
+}
+.commit-file-row:hover { background: var(--surface-hover); }
+.commit-file-path {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: .75rem;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.commit-empty-state {
+  color: var(--text-muted);
+  font-size: .82rem;
+  text-align: center;
+  padding: 14px 0 6px;
+}
 
 /* Studio repo section (top of left col) — standalone, no overflow:hidden so dropdown can escape */
 .studio-repo-top-section {
@@ -928,9 +989,15 @@ code          { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .
 
 .studio-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 24px;
   align-items: start;
+}
+.studio-preview-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
@@ -1115,8 +1182,8 @@ code          { font-family: 'SFMono-Regular', Consolas, monospace; font-size: .
 .studio-commit-btn {
   width: 100%;
   justify-content: center;
-  padding: 14px 24px;
-  font-size: 1rem;
+  padding: 10px 24px;
+  font-size: .9rem;
   font-weight: 700;
   letter-spacing: .01em;
   border-radius: 8px;
