@@ -5,6 +5,9 @@ import "context"
 // GitProvider defines the contract for interacting with a hosted Git service.
 // Every method receives the end-user OAuth token — no admin tokens are used.
 type GitProvider interface {
+	// GetCurrentUser returns the authenticated user's profile information.
+	GetCurrentUser(ctx context.Context, token string) (*UserInfo, error)
+
 	// GetRepositories returns all repos accessible to the authenticated user.
 	GetRepositories(ctx context.Context, token string) ([]Repository, error)
 
@@ -17,6 +20,12 @@ type GitProvider interface {
 	// GetTemplateFiles returns the raw contents of all template files for a form,
 	// keyed by their path relative to .courtyard/templates/{formName}/.
 	GetTemplateFiles(ctx context.Context, token string, owner string, repo string, formName string) (map[string][]byte, error)
+
+	// ListTree returns the paths of files under dirPath (relative to repo root), up to max entries.
+	// If dirPath is empty the entire repo is scanned.
+	// Paths under .courtyard/ are always excluded.
+	// truncated is true when the result was capped at max before all entries were collected.
+	ListTree(ctx context.Context, token string, owner string, repo string, dirPath string, max int) (paths []string, truncated bool, err error)
 
 	// CreateBranchAndPullRequest commits all output files to a new (or existing) branch
 	// and opens a pull request. Returns the URL of the created PR.

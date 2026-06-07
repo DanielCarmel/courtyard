@@ -3,7 +3,9 @@ package git
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/google/go-github/v66/github"
@@ -24,6 +26,20 @@ func (g *GitHubProvider) newClient(ctx context.Context, token string) *github.Cl
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	httpClient := oauth2.NewClient(ctx, ts)
 	return github.NewClient(httpClient)
+}
+
+// GetCurrentUser returns the authenticated user's GitHub profile.
+func (g *GitHubProvider) GetCurrentUser(ctx context.Context, token string) (*UserInfo, error) {
+	client := g.newClient(ctx, token)
+	user, _, err := client.Users.Get(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("github.GetCurrentUser: %w", err)
+	}
+	return &UserInfo{
+		Username:  user.GetLogin(),
+		AvatarURL: user.GetAvatarURL(),
+		Provider:  "github",
+	}, nil
 }
 
 // GetRepositories returns all repositories accessible to the authenticated user.
@@ -63,6 +79,10 @@ func (g *GitHubProvider) ListForms(ctx context.Context, token, owner, repo strin
 	client := g.newClient(ctx, token)
 	_, dirContents, _, err := client.Repositories.GetContents(ctx, owner, repo, ".courtyard/forms", nil)
 	if err != nil {
+		var ghErr *github.ErrorResponse
+		if errors.As(err, &ghErr) && ghErr.Response != nil && ghErr.Response.StatusCode == http.StatusNotFound {
+			return []string{}, nil
+		}
 		return nil, fmt.Errorf("ListForms: %w", err)
 	}
 	var forms []string
@@ -151,6 +171,54 @@ func (g *GitHubProvider) GetTemplateFiles(ctx context.Context, token, owner, rep
 		return nil, fmt.Errorf("GetTemplateFiles: no templates found at %q", treePath)
 	}
 	return files, nil
+}
+
+// ListTree returns paths of files under dirPath (relative to repo root) up to max entries.
+// .courtyard/ entries are excluded. truncated is true when the cap was hit.
+func (g *GitHubProvider) ListTree(ctx context.Context, token, owner, repo, dirPath string, max int) ([]string, bool, error) {
+	client := g.newClient(ctx, token)
+
+	ref, _, err := client.Git.GetRef(ctx, owner, repo, "heads/HEAD")
+	if err != nil {
+		ref, _, err = client.Git.GetRef(ctx, owner, repo, "heads/main")
+		if err != nil {
+			return nil, false, fmt.Errorf("github.ListTree: resolve HEAD: %w", err)
+		}
+	}
+
+	commit, _, err := client.Git.GetCommit(ctx, owner, repo, ref.GetObject().GetSHA())
+	if err != nil {
+		return nil, false, fmt.Errorf("github.ListTree: get commit: %w", err)
+	}
+
+	tree, _, err := client.Git.GetTree(ctx, owner, repo, commit.GetTree().GetSHA(), true)
+	if err != nil {
+		return nil, false, fmt.Errorf("github.ListTree: get tree: %w", err)
+	}
+
+	prefix := ""
+	if dirPath != "" {
+		prefix = dirPath + "/"
+	}
+
+	var paths []string
+	for _, entry := range tree.Entries {
+		if entry.GetType() != "blob" {
+			continue
+		}
+		p := entry.GetPath()
+		if strings.HasPrefix(p, ".courtyard/") {
+			continue
+		}
+		if prefix != "" && !strings.HasPrefix(p, prefix) {
+			continue
+		}
+		paths = append(paths, p)
+		if len(paths) >= max {
+			return paths, true, nil
+		}
+	}
+	return paths, false, nil
 }
 
 // CreateBranchAndPullRequest creates (or reuses) a branch, commits all files,

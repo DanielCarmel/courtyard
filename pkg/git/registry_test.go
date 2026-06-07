@@ -21,8 +21,14 @@ func (s *stubProvider) GetFormConfig(_ context.Context, _ string, _ string, _ st
 func (s *stubProvider) GetTemplateFiles(_ context.Context, _ string, _ string, _ string, _ string) (map[string][]byte, error) {
 	return nil, nil
 }
+func (s *stubProvider) GetCurrentUser(_ context.Context, _ string) (*UserInfo, error) {
+	return nil, nil
+}
 func (s *stubProvider) CreateBranchAndPullRequest(_ context.Context, _ string, _ string, _ string, _ string, _ string, _ string, _ []OutputFile) (string, error) {
 	return "", nil
+}
+func (s *stubProvider) ListTree(_ context.Context, _ string, _ string, _ string, _ string, _ int) ([]string, bool, error) {
+	return nil, false, nil
 }
 
 func TestRegistry_Get(t *testing.T) {
